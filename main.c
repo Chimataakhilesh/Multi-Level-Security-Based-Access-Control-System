@@ -89,136 +89,162 @@ unsigned int keyscan(void)
 	while((c0&&c1&&c2&&c3)==0);//waithing for key release
 	return key_lut[row_val][col_val];
 }
+#include <LPC21XX.H>
+
+/* Main function */
 int main()
 {
-	u32 i = 28,entered_otp,attempt;
-	u8 pass[9],org[9],digit;
-	IODIR1 |= DC1|DC2|LED;
-	IOSET1 = DC1|DC2|LED;
-	I2C_INIT();
-	LCD_INIT();
-	UART_INIT();
-	eeprom_page_write(SA,0x00,"STAR@321",8);
-	T1PR = 1500000;
-	T1TCR = 0x01;
-	LCD_COMMAND(0x80);
-	LCD_STRING("  Multi - Level  ");
-	LCD_COMMAND(0xC0);
-	LCD_STRING(" Security Based ");
-	LCD_COMMAND(0x94);
-	LCD_STRING("AccessControl System");
-	delay_seconds(2);
-	/*while(i>0)
-	LCD_COMMAND(0x18);*/
-	LCD_COMMAND(0x01);
-	while(1) 
-	{ 
-		LCD_COMMAND(0x80);
-    	LCD_STRING("ENTER PASSWORD");
-		LCD_COMMAND(0xC0);
-   		 // Read 8-digit password
-    	for(i = 0; i < 8; i++) 
-		{
-        pass[i] = keyscan();
-		LCD_DATA(pass[i]);
-    	}
-    pass[8] = '\0';
+    u32 i = 28, entered_otp, attempt;
+    u8 pass[9], org[9], digit;
 
-    // Read stored password
-    eeprom_seq_read(SA, 0x00, org, 8);
-    org[8] = '\0';
+    IODIR1 |= DC1 | DC2 | LED;
+    IOSET1 = DC1 | DC2 | LED;
 
-    if(my_strcmp((char *)pass, (char *)org) == 0)
+    I2C_INIT();
+    LCD_INIT();
+    UART_INIT();
+
+    eeprom_page_write(SA, 0x00, "STAR@321", 8);
+
+    T1PR = 1500000;
+    T1TCR = 0x01;
+
+    LCD_COMMAND(0x80);
+    LCD_STRING("  Multi - Level  ");
+    LCD_COMMAND(0xC0);
+    LCD_STRING(" Security Based ");
+    LCD_COMMAND(0x94);
+    LCD_STRING("AccessControl System");
+    delay_seconds(2);
+
+    LCD_COMMAND(0x01);
+
+    while(1)
     {
-		LCD_COMMAND(0x01);
-        // Password correct ? OTP step
-        attempt = 0;
-        while(attempt < MAX_OTP_ATTEMPTS)
+        LCD_COMMAND(0x80);
+        LCD_STRING("ENTER PASSWORD");
+        LCD_COMMAND(0xC0);
+
+        /* Read password */
+        for(i = 0; i < 8; i++)
         {
-            otp = T1PC % 10000;       
-            // Send OTP via GSM
-            GSM(0);
+            pass[i] = keyscan();
+            LCD_DATA(pass[i]);
+        }
+        pass[8] = '\0';
 
-            LCD_COMMAND(0x80);
-            LCD_STRING("Enter OTP:");
+        /* Read stored password */
+        eeprom_seq_read(SA, 0x00, org, 8);
+        org[8] = '\0';
 
-            // Read OTP from keypad
-            entered_otp = 0;
-			LCD_COMMAND(0xC0);
-            for(i = 0; i < OTP_DIGITS; i++)
-			{
-				digit = keyscan();                 
-				entered_otp = entered_otp * 10 + (digit-'0');
-				LCD_DATA(digit);             
-			}
-			LCD_COMMAND(0x01);
-            if(entered_otp == otp)
+        if(my_strcmp((char *)pass, (char *)org) == 0)
+        {
+            LCD_COMMAND(0x01);
+
+            attempt = 0;
+
+            while(attempt < MAX_OTP_ATTEMPTS)
             {
+                otp = T1PC % 10000;
+
+                GSM(0);
+
                 LCD_COMMAND(0x80);
-                LCD_STRING("ACCESS GRANTED");
-			  	LCD_COMMAND(0xc0);
-			  	LCD_STRING("LOCKER OPENED");
-				DCMOTOR();
-				IOSET1 = DC1|DC2|LED;
-				break;
-            }
-            else
-            {
-                attempt++;
-                if(attempt < MAX_OTP_ATTEMPTS)
+                LCD_STRING("Enter OTP:");
+                LCD_COMMAND(0xC0);
+
+                entered_otp = 0;
+
+                for(i = 0; i < OTP_DIGITS; i++)
                 {
+                    digit = keyscan();
+                    entered_otp = entered_otp * 10 + (digit - '0');
+                    LCD_DATA(digit);
+                }
+
+                LCD_COMMAND(0x01);
+
+                if(entered_otp == otp)
+                {
+                    LCD_COMMAND(0x80);
+                    LCD_STRING("ACCESS GRANTED");
                     LCD_COMMAND(0xC0);
-                    LCD_STRING("WRONG OTP");
-                    delay_ms(1000);
-					LCD_COMMAND(0x01);
+                    LCD_STRING("LOCKER OPENED");
+
+                    DCMOTOR();
+                    IOSET1 = DC1 | DC2 | LED;
+                    break;
                 }
                 else
                 {
-                    LCD_COMMAND(0xC0);
-                    LCD_STRING("ACCESS DENIED");
-					GSM(1);
+                    attempt++;
+
+                    if(attempt < MAX_OTP_ATTEMPTS)
+                    {
+                        LCD_COMMAND(0xC0);
+                        LCD_STRING("WRONG OTP");
+                        delay_ms(1000);
+                        LCD_COMMAND(0x01);
+                    }
+                    else
+                    {
+                        LCD_COMMAND(0xC0);
+                        LCD_STRING("ACCESS DENIED");
+                        GSM(1);
+                    }
                 }
             }
         }
+        else
+        {
+            LCD_COMMAND(0xC0);
+            LCD_STRING("WRONG PASSWORD");
+            delay_ms(1000);
+        }
+
+        LCD_COMMAND(0x01);
     }
-    else
-    {
-        LCD_COMMAND(0xC0);
-        LCD_STRING("WRONG PASSWORD");
-        delay_ms(1000);
-    }
-	LCD_COMMAND(0x01);
 }
-}
+
+/* Send number over UART */
 void UART_NUM(unsigned int n)
 {
-  	int i;  
-	char buf[6];           
-  	sprintf(buf, "%04u", n); 
-	for(i = 0; buf[i] != '\0'; i++)
-  	{
-        UART_TX(buf[i]);  
-  	}
+    int i;
+    char buf[6];
+
+    sprintf(buf, "%04u", n);
+
+    for(i = 0; buf[i] != '\0'; i++)
+    {
+        UART_TX(buf[i]);
+    }
 }
-int my_strcmp(char *s1,char *s2)
+
+/* Compare two strings */
+int my_strcmp(char *s1, char *s2)
 {
-	int i;
-	for(i=0;i<8;i++)
-	{
-		if(s1[i]>s2[i])
-			return 1;
-		else if(s1[i]<s2[i])
-			return -1;
-	}
-	return 0;
+    int i;
+
+    for(i = 0; i < 8; i++)
+    {
+        if(s1[i] > s2[i])
+            return 1;
+        else if(s1[i] < s2[i])
+            return -1;
+    }
+
+    return 0;
 }
+
+/* DC motor control */
 void DCMOTOR(void)
 {
-	IOSET1 = DC1;
-	IOCLR1 = DC2|LED;
-	delay_seconds(3);
-
+    IOSET1 = DC1;
+    IOCLR1 = DC2 | LED;
+    delay_seconds(3);
 }
+
+/* GSM SMS function */
 void GSM(unsigned int n)
 {
     char msg[60];
@@ -230,20 +256,20 @@ void GSM(unsigned int n)
     delay_ms(1000);
 
     UART_STRING("AT+CMGS=\"+919360055735\"\r");
-    delay_ms(2000);   
+    delay_ms(2000);
 
-    if(n==0)
+    if(n == 0)
     {
         sprintf(msg, "This is your otp:%04u for locker open", otp);
         UART_STRING(msg);
     }
-    else if(n==1)
+    else if(n == 1)
     {
         UART_STRING("Unauthorized Access");
     }
 
     delay_ms(500);
 
-    UART_TX(0x1A);   
-    delay_ms(1000);  // wait for SMS send
+    UART_TX(0x1A);
+    delay_ms(1000);
 }

@@ -1,8 +1,8 @@
-# 🔐 Multi-Level Security Based Access Control System (LPC21XX)
+# 🔐 Multi-Level Security Based Access Control System (LPC2129)
 <img width="347" height="169" alt="tittle" src="https://github.com/user-attachments/assets/32cefd52-a926-4012-8a8c-7c562fde10de" />
 
 ## 📌 Project Overview
-This project is an embedded system based on the LPC21XX microcontroller that implements a secure access control mechanism using **password authentication + OTP verification**. It is designed for applications like smart lockers, restricted rooms, and security systems.
+This project is an embedded system based on the LPC2129 microcontroller that implements a secure access control mechanism using **password authentication + OTP verification**. It is designed for applications like smart lockers, restricted rooms, and security systems.
 
 ---
 

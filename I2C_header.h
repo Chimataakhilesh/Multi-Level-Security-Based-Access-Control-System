@@ -22,49 +22,62 @@ void I2C_WRITE(u8);
 u8 I2C_NACK(void);
 u8 I2C_MASTERACK(void);
 
+/* Initialize I2C */
 void I2C_INIT(void)
 {
-	PINSEL0 |= SCL|SDA;
-	I2SCLL = LOADVAL;
-	I2SCLH = LOADVAL;
-	I2CONSET = 1<<I2C_EN;
+    PINSEL0 |= SCL | SDA;      // Enable I2C pins
+    I2SCLL = LOADVAL;          // Set clock low time
+    I2SCLH = LOADVAL;          // Set clock high time
+    I2CONSET = 1 << I2C_EN;    // Enable I2C
 }
+
+/* Start condition */
 void I2C_START(void)
 {
-	I2CONSET = 1<<STA_BIT;
-	while(((I2CONSET>>SI_BIT)&1)==0);
-	I2CONCLR = 1<<STA_BIT;
+    I2CONSET = 1 << STA_BIT;
+    while(((I2CONSET >> SI_BIT) & 1) == 0);
+    I2CONCLR = 1 << STA_BIT;
 }
+
+/* Stop condition */
 void I2C_STOP(void)
 {
-	I2CONSET = 1<<STO_BIT;
-	I2CONCLR = 1<<SI_BIT;
+    I2CONSET = 1 << STO_BIT;
+    I2CONCLR = 1 << SI_BIT;
 }
+
+/* Restart condition */
 void I2C_RESTART(void)
 {
-	I2CONSET = 1<<STA_BIT;
-	I2CONCLR = 1<<SI_BIT;
-	while(((I2CONSET>>SI_BIT)&1)==0);
-	I2CONCLR = 1<<STA_BIT;
+    I2CONSET = 1 << STA_BIT;
+    I2CONCLR = 1 << SI_BIT;
+    while(((I2CONSET >> SI_BIT) & 1) == 0);
+    I2CONCLR = 1 << STA_BIT;
 }
+
+/* Write data on I2C bus */
 void I2C_WRITE(u8 dat)
 {
-	I2DAT = dat;
-	I2CONCLR = 1<<SI_BIT;
-	while(((I2CONSET>>SI_BIT)&1)==0);
+    I2DAT = dat;
+    I2CONCLR = 1 << SI_BIT;
+    while(((I2CONSET >> SI_BIT) & 1) == 0);
 }
+
+/* Read byte with NACK */
 u8 I2C_NACK(void)
 {
-	I2CONSET = 0x00;
-	I2CONCLR = 1<<SI_BIT;
-	while(((I2CONCLR>>SI_BIT)&1)==0);
-	return I2DAT;
+    I2CONSET = 0x00;
+    I2CONCLR = 1 << SI_BIT;
+    while(((I2CONCLR >> SI_BIT) & 1) == 0);
+    return I2DAT;
 }
+
+/* Read byte with ACK */
 u8 I2C_MASTERACK(void)
 {
-	I2CONSET = 1<<AA_BIT;
-	I2CONCLR = 1<<SI_BIT;
-	while(((I2CONSET>>SI_BIT)&1)==0);
-	I2CONCLR = 1<<AA_BIT;
-	return I2DAT;
+    I2CONSET = 1 << AA_BIT;
+    I2CONCLR = 1 << SI_BIT;
+    while(((I2CONSET >> SI_BIT) & 1) == 0);
+    I2CONCLR = 1 << AA_BIT;
+    return I2DAT;
 }
